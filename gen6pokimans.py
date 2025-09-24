@@ -7,7 +7,7 @@ mydb = mysql.connector.connect(
   password="password123",
   database="PokemonDB"
 )
-mycursor = mydb.cursor()
+mycursor = mydb.cursor(dictionary=True)  # dictionary=True per avere dict e non tuple
 
 app = Flask(__name__)
 
@@ -17,42 +17,38 @@ def home():
 
 @app.route("/pokemon")
 def get_all_pokemon():
-    mycursor.execute("SELECT id, Name, Type1, Type2 FROM pokemon LIMIT 50")
-    columns = [desc[0] for desc in mycursor.description]
-    myresult = mycursor.fetchall()
-    result = [dict(zip(columns, row)) for row in myresult]
-    return jsonify(result)
+    mycursor.execute("SELECT * FROM Pokemon")
+    results = mycursor.fetchall()
+    return jsonify(results)
 
-@app.route("/pokemon/<int:pokemon_id>")
-def get_pokemon_detail(pokemon_id):
-    mycursor.execute("SELECT * FROM pokemon WHERE id = %s", (pokemon_id,))
-    columns = [desc[0] for desc in mycursor.description]
-    row = mycursor.fetchone()
-    if row is None:
-        abort(404, description="Pokémon non trovato")
-    result = dict(zip(columns, row))
-    return jsonify(result)
+@app.route("/count")
+def get_pokemon_count():
+    mycursor.execute("SELECT COUNT(*) AS total FROM Pokemon")
+    count = mycursor.fetchone()['total']
+    return jsonify({"total_pokemon": count})
 
-@app.route("/type/<type_name>")
-def get_pokemon_by_type(type_name):
-    query = """
-    SELECT id, Name, Type1, Type2 FROM pokemon
-    WHERE Type1 = %s OR Type2 = %s
-    """
-    mycursor.execute(query, (type_name.capitalize(), type_name.capitalize()))
-    columns = [desc[0] for desc in mycursor.description]
-    myresult = mycursor.fetchall()
-    result = [dict(zip(columns, row)) for row in myresult]
-    return jsonify(result)
+@app.route("/types")
+def get_all_types():
+    mycursor.execute("SELECT DISTINCT type1 FROM Pokemon")
+    types1 = {row['type1'] for row in mycursor.fetchall()}
+    mycursor.execute("SELECT DISTINCT type2 FROM Pokemon WHERE type2 IS NOT NULL")
+    types2 = {row['type2'] for row in mycursor.fetchall()}
+    all_types = sorted(types1.union(types2))
+    return jsonify({"types": all_types})
 
-# Route per Pokémon leggendari
-@app.route("/legendary")
+@app.route("/fast")
+def get_fast_pokemon():
+    mycursor.execute("SELECT * FROM Pokemon WHERE speed > 100")
+    results = mycursor.fetchall()
+    return jsonify(results)
+
+@app.route("/pokemon/legendary")
 def get_legendary_pokemon():
-    mycursor.execute("SELECT id, Name, Type1, Type2 FROM pokemon WHERE Legendary = TRUE")
-    columns = [desc[0] for desc in mycursor.description]
-    myresult = mycursor.fetchall()
-    result = [dict(zip(columns, row)) for row in myresult]
-    return jsonify(result)
+    mycursor.execute("SELECT * FROM Pokemon WHERE legendary = TRUE")
+    results = mycursor.fetchall()
+    return jsonify(results)
+
 
 if __name__ == "__main__":
     app.run(debug=True)
+
