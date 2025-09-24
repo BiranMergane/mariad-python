@@ -5,7 +5,7 @@ mydb = mysql.connector.connect(
   host="localhost",
   user="pythonuser",
   password="password123",
-  database="pokemon_db"
+  database="PokemonDB"
 )
 mycursor = mydb.cursor()
 
